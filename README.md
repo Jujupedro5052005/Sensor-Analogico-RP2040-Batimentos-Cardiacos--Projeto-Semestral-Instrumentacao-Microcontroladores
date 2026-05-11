@@ -1,4 +1,4 @@
-# Monitor Portátil de Frequência Cardíaca e Saturação de Oxigênio (SpO₂)
+# Monitor Portátil de Frequência Cardíaca e Saturação de Oxigênio
 
 ## 📌 Descrição do Projeto
 
