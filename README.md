@@ -1,0 +1,2 @@
+# Sensor-Analogico-RP2040-Batimentos-Cardiacos---Projeto-Semestral-Instrumentacao-Microcontroladores
+Objetivo: projeto e implementação de um sistema embarcado baseado em um sensor analógico integrado a um microcontrolador RP2040, envolvendoa aquisição e o condicionamento de sinais, processamento de dados, implementação de lógica de controle, comunicação e exibição de informações, além do acionamento de atuadores, aplicado na area da saude
