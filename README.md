@@ -11,8 +11,6 @@ O sistema é baseado no microcontrolador **RP2040** e utiliza sensores ópticos 
 
 O projeto foi desenvolvido para a disciplina de **Instrumentação e Microcontroladores e Sistemas Microcontrolados**, com foco na aplicação na área da saúde.
 
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 # 🎯 Objetivo
 
 Desenvolver um sistema embarcado completo utilizando o microcontrolador RP2040, integrando:
@@ -25,8 +23,6 @@ Desenvolver um sistema embarcado completo utilizando o microcontrolador RP2040, 
 - Desenvolvimento de PCB e estrutura mecânica.
 
 O sistema busca fornecer medições básicas de sinais vitais de forma portátil, didática e de baixo custo.
-
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # 🧠 Fundamentação Teórica
 
@@ -41,8 +37,6 @@ A hemoglobina oxigenada e desoxigenada absorvem essas frequências de forma dife
 
 Além disso, as oscilações periódicas do sinal PPG permitem calcular a frequência cardíaca do usuário.
 
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 # ⚙️ Funcionalidades
 
 - Medição da frequência cardíaca (BPM)
@@ -53,8 +47,6 @@ Além disso, as oscilações periódicas do sinal PPG permitem calcular a frequ�
 - Sistema de alertas sonoros
 - Estrutura mecânica impressa em 3D
 - PCB dedicada para integração do sistema
-
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # 🧩 Arquitetura do Sistema
 
@@ -96,8 +88,6 @@ Além disso, as oscilações periódicas do sinal PPG permitem calcular a frequ�
 └──────────────┘         └────────────────┘
 ```
 
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 # 🔌 Hardware Utilizado
 
 ## Microcontrolador
@@ -127,8 +117,6 @@ Além disso, as oscilações periódicas do sinal PPG permitem calcular a frequ�
 - Case impresso em 3D
 - Suporte para dedo/sensor
 
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 # 🖥️ Firmware
 
 O firmware foi desenvolvido em:
@@ -146,8 +134,6 @@ O firmware foi desenvolvido em:
 - Estimativa de SpO₂
 - Comunicação serial
 - Interface gráfica
-
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # 📂 Estrutura do Repositório
 
@@ -174,8 +160,6 @@ O firmware foi desenvolvido em:
 └── README.md
 ```
 
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 # 📊 Tratamento de Sinais
 
 O sinal captado pelo fotodiodo apresenta baixa amplitude e elevada susceptibilidade a ruídos, exigindo técnicas de condicionamento e processamento.
@@ -190,8 +174,6 @@ Foram implementados:
 
 O objetivo é melhorar a relação sinal-ruído e permitir medições mais confiáveis.
 
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 # 📸 Fotos do Projeto
 
 ## Protótipo
@@ -202,8 +184,6 @@ O objetivo é melhorar a relação sinal-ruído e permitir medições mais confi
 /docs/imagens/prototipo.jpg
 ```
 
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 # PCB
 
 > Inserir imagem da PCB aqui
@@ -212,8 +192,6 @@ O objetivo é melhorar a relação sinal-ruído e permitir medições mais confi
 /docs/imagens/pcb.jpg
 ```
 
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 # 🎥 Vídeo de Funcionamento
 
 > Inserir link do vídeo demonstrativo
@@ -221,8 +199,6 @@ O objetivo é melhorar a relação sinal-ruído e permitir medições mais confi
 ```text
 youtube.com/(alguma coisa)
 ```
-
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # 📄 Relatório Técnico
 
@@ -241,8 +217,6 @@ youtube.com/(alguma coisa)
 | Nome Integrante 1: Erich Abreu Serfaim | R.A. 23.10022-2 |
 | Nome Integrante 2: João Pedro de Jesus Cândido Silva | R.A. 23.01416-4 |
 
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 # 🏫 Instituição
 
 **Instituto Mauá de Tecnologia (IMT)**
@@ -254,16 +228,12 @@ youtube.com/(alguma coisa)
 - Prof. Andressa Martins  
 - Prof. Rodrigo França
 
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-
 # 📅 Cronograma
 
 | Etapa | Data |
 |---|---|
 | Apresentação do Projeto | 02/06/2026 |
 | Entrega do Relatório | 28/06/2026 |
-
--=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 # 📜 Licença
 
