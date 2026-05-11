@@ -216,7 +216,7 @@ youtube.com/(alguma coisa)
 
 | Nome | RA |
 |---|---|
-| Erich Abreu Serfaim | R.A. 23.10022-2 |
+| Erich Abreu Serafim | R.A. 23.10022-2 |
 | João Pedro de Jesus Cândido Silva | R.A. 23.01416-4 |
 
 # 🏫 Instituição
