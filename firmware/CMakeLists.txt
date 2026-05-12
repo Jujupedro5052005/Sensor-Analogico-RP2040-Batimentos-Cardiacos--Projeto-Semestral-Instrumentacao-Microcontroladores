@@ -59,6 +59,7 @@ target_include_directories(sensor_batimento_cardiaco PRIVATE
 target_link_libraries(sensor_batimento_cardiaco 
         hardware_spi
         hardware_i2c
+        hardware_adc
         )
 
 pico_add_extra_outputs(sensor_batimento_cardiaco)
