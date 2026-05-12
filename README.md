@@ -1,7 +1,7 @@
 # Monitor Portátil de Frequência Cardíaca e Saturação de Oxigênio
 
 <p align="center">
-  <img src="banner_projeto_nano_banana_gemini.jpg" alt="Banner do Projeto" width="100%">
+  <img src="docs/imagens/banner_projeto_nano_banana_gemini.jpg" alt="Banner do Projeto" width="100%">
 </p>
 
 ## 📌 Descrição do Projeto
