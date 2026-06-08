@@ -89,6 +89,7 @@ void adc_fifo_handler(void){
     }
 }
 
+
 bool sample_timer_callback(repeating_timer_t *t){
     // Aciona a leitura de dados
     adc_run(true);
@@ -114,6 +115,8 @@ int main() {
 
     adc_select_input(ADC_INPUT); // Seleciona o canal ADC_INPUT
 
+    adc_set_clkdiv(16000); // Clock divider para prevenir flood pelo ADC
+
     adc_fifo_setup( // Inicializa a fila
         true,
         false,
@@ -131,9 +134,9 @@ int main() {
     adc_irq_set_enabled(true);
 
     irq_set_enabled(ADC_IRQ_FIFO,true);
-
+    
     add_repeating_timer_ms(10, sample_timer_callback, NULL, &timer);
-
+    
     while (true) {
 
         // =========================
@@ -144,6 +147,5 @@ int main() {
                filtered,
                smoothBpm,
                bpm);
-
     }
 }
