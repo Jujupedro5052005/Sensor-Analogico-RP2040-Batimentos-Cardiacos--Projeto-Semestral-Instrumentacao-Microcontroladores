@@ -1,161 +1,219 @@
+#include <stdio.h>
 #include "pico/stdlib.h"
+#include "hardware/adc.h"
 #include "hardware/i2c.h"
 #include "ssd1306.h"
 
-#define LED 25
+// =========================
+// CONFIG
+// =========================
 
-// ================= BATIMENTO SIMPLES =================
-static const int heartbeat[] = {
-    0, 2, 5, 10, 20, 10, 5, 2, 0, 0,
-    3, 6, 12, 25, 12, 6, 3, 0
+#define SENSOR_PIN 26          // GPIO26 = ADC0
+#define ADC_INPUT 0
+#define SDA_INPUT 4
+#define SCL_INPUT 5
+
+// =========================
+// VARIÁVEIS GLOBAIS
+// =========================
+
+float filtered = 0.0f; // filtered age como a frequência cardiaca suavizada
+float baseline = 0.0f; // baseline age como uma estimativa lenta do sinal lido
+
+bool beatDetected = false; // Detecta se o sinal está em um pico
+
+uint32_t lastBeatTime = 0; // Valor para contagem da frequêncai cardiaca 
+
+float bpm = 0.0f; // BPM instântaneo
+float smoothBpm = 0.0f; // BPM filtrado
+
+repeating_timer_t timer; // Timer para interrupção
+
+uint8_t oled_buf[SSD1306_BUF_LEN]; // Cria buffer para o OLED
+
+ssd1306_render_area_t area={ // Cria área de renderização
+    .start_col = 0,
+    .end_col = 127,
+    .start_page = 0,
+    .end_page = SSD1306_NUM_PAGES -1
 };
+
+void process_sample(uint16_t raw){
+    // Função para tratamento do sinal
+    
+    // Filtro passa-baixa exponencial
+    baseline = 0.99f * baseline + 0.01f * raw;
+
+    // Remoção de offset DC
+    float signal = raw - baseline;
+
+    // Amplificação digital de sinal
+    signal *= 10.0f;
+
+    // Recentralização do sinal (4096/2)
+    signal += 2048.0f;
+
+    // Filtro exponencial a fim de suavizar o sinal
+    filtered = 0.92f * filtered + 0.08f * signal;
+
+    // Threshold; valor minimo sob qual um sinal pode ser considerado um batimento
+    float threshold = 2300.0f;
+
+    // =========================
+    // DETECÇÂO DE BATIMENTO
+    // =========================
+
+    uint32_t now = to_ms_since_boot(get_absolute_time());
+
+    // Se o sinal pode ser um batimento e já não estamos em um pico
+    if (filtered > threshold && !beatDetected) {
+
+        beatDetected = true; // Marca que o sinal é um batimento
+
+        // Computa variação de tempo
+        uint32_t delta = now - lastBeatTime;
+
+        // Intervalo válido para a frequência cardiaca 
+        // 40 < BPM < 200
+        if (delta > 300 && delta < 1500) {
+
+            bpm = 60000.0f / delta; // Conversão para min^-1
+
+            // Filtro exponencial para suavizar a saída do BPM
+            smoothBpm = 0.85f * smoothBpm + 0.15f * bpm;
+        }
+
+        lastBeatTime = now; // Atualiza o tempo
+    }
+
+    // Reseta o detector de pico
+    if (filtered < threshold - 100.0f) {
+        beatDetected = false;
+    }
+}
+
+void adc_fifo_handler(void){ // Função chamada pelo fifo
+    while(!adc_fifo_is_empty()){
+        // Lê o sinal da fila
+        uint16_t raw = adc_fifo_get();
+
+        // Processa o sinal lido
+        process_sample(raw);
+    }
+}
+
+bool sample_timer_callback(repeating_timer_t *t){ // Função chamada pelo timer
+    // Aciona a leitura de dados
+    adc_run(true);
+
+    return true;
+}
+
+void update_display(void){
+    // Função para atualizar o display
+
+    char bpm_text[32];
+
+    ssd1306_clear(oled_buf); // Limpa o texto do OLED
+
+    ssd1306_draw_text( // Escreve no OLED
+        oled_buf,
+        0,
+        0,
+        "HEART RATE"
+    );
+
+    sprintf( // Converte numero em texto
+        bpm_text,
+        "BPM %d",
+        (int)smoothBpm
+    );
+
+    ssd1306_draw_text(
+        oled_buf,
+        0,
+        16,
+        bpm_text
+    );
+
+    ssd1306_render_full( // Atualiza efetivamente o display
+        oled_buf,
+        &area
+    );
+
+}
+
+// =========================
+// MAIN
+// =========================
 
 int main() {
 
     stdio_init_all();
 
-    // I2C
-    i2c_init(i2c_default, 400 * 1000);
-    gpio_set_function(4, GPIO_FUNC_I2C);
-    gpio_set_function(5, GPIO_FUNC_I2C);
-    gpio_pull_up(4);
-    gpio_pull_up(5);
+    // =========================
+    // I2C INIT
+    // =========================
 
-    // LED
-    gpio_init(LED);
-    gpio_set_dir(LED, GPIO_OUT);
+    i2c_init(i2c_default, 400 * 1000); // Inicializa o i2c
 
-    // OLED
-    ssd1306_init();
+    gpio_set_function(SDA_INPUT, GPIO_FUNC_I2C); // Liga o GPIO4 ao SDA
+    gpio_set_function(SCL_INPUT, GPIO_FUNC_I2C); // Liga o GPIO5 ao SCL
 
-    uint8_t buf[SSD1306_BUF_LEN];
+    gpio_pull_up(SDA_INPUT); // Aciona resistores de pull-up internos
+    gpio_pull_up(SCL_INPUT); // Aciona resistores de pull-up internos
 
-    ssd1306_render_area_t area = {
-        .start_col = 0,
-        .end_col = 127,
-        .start_page = 0,
-        .end_page = SSD1306_NUM_PAGES - 1
-    };
+    // =========================
+    // SSD1306 INIT
+    // =========================
 
-    ssd1306_calc_area(&area);
+    ssd1306_init(); // Inicializa o SSD1306
 
-    // =========================================================
-    // 1. TESTE TEXTO SIMPLES
-    // =========================================================
-    ssd1306_clear(buf);
-    ssd1306_draw_text(buf, 0, 0, "SSD1306 READY");
-    ssd1306_draw_text(buf, 0, 16, "PICO TEST OK");
-    ssd1306_render_full(buf, &area);
+    ssd1306_calc_area(&area); // Calcula qual área do OLED será usada
 
-    sleep_ms(2000);
+    // =========================
+    // ADC INIT
+    // =========================
 
-    // =========================================================
-    // 2. GRID VISUAL (DEBUG GEOMETRICO)
-    // =========================================================
-    ssd1306_clear(buf);
+    adc_init(); // Inicializa o adc
 
-    // linhas verticais
-    for (int x = 0; x < SSD1306_WIDTH; x += 8) {
-        ssd1306_draw_line(buf, x, 0, x, SSD1306_HEIGHT - 1);
-    }
+    adc_gpio_init(SENSOR_PIN); // Lê o sinal pelo SENSOR_PIN
 
-    // linhas horizontais
-    for (int y = 0; y < SSD1306_HEIGHT; y += 8) {
-        ssd1306_draw_line(buf, 0, y, SSD1306_WIDTH - 1, y);
-    }
+    adc_select_input(ADC_INPUT); // Seleciona o canal ADC_INPUT
 
-    ssd1306_render_full(buf, &area);
+    adc_set_clkdiv(16000); // Clock divider para prevenir flood pelo ADC
 
-    sleep_ms(2000);
+    adc_fifo_setup( // Inicializa a fila
+        true,
+        false,
+        1,
+        false,
+        false
+    );
 
-    // =========================================================
-    // 3. DIAGONAL SWEEP
-    // =========================================================
-    ssd1306_clear(buf);
+    // =========================
+    // CONFIG INTERRUPÇÂO
+    // =========================
 
-    for (int i = 0; i < 128; i += 4) {
-        ssd1306_draw_line(buf, 0, 31, i, 0);
-        ssd1306_render_full(buf, &area);
-    }
+    irq_set_exclusive_handler(ADC_IRQ_FIFO, adc_fifo_handler);
 
-    sleep_ms(1000);
+    adc_irq_set_enabled(true);
 
-    // =========================================================
-    // 4. "HEARTBEAT MONITOR"
-    // =========================================================
-    ssd1306_clear(buf);
+    irq_set_enabled(ADC_IRQ_FIFO,true);
+    
+    add_repeating_timer_ms(10, sample_timer_callback, NULL, &timer);
+    
+    while (true) {
 
-    int x = 0;
+        // =========================
+        // SAÍDA SERIAL & EXIBIÇÂO
+        // =========================
 
-    while (x < 120) {
+        update_display(); // Atualiza o display
 
-        ssd1306_clear(buf);
-
-        ssd1306_draw_text(buf, 0, 0, "HEART RATE");
-
-        for (int i = 0; i < 16; i++) {
-
-            int y = 31 - heartbeat[i];
-
-            ssd1306_set_pixel(buf, x + i, y, true);
-
-            if (i > 0) {
-                int prev_y = 31 - heartbeat[i - 1];
-                ssd1306_draw_line(buf, x + i - 1, prev_y, x + i, y);
-            }
-        }
-
-        ssd1306_render_full(buf, &area);
-
-        x += 2;
-        sleep_ms(80);
-    }
-
-    sleep_ms(1000);
-
-    // =========================================================
-    // 5. SCANNER STYLE (tipo radar)
-    // =========================================================
-    ssd1306_clear(buf);
-
-    for (int i = 0; i < 128; i++) {
-
-        ssd1306_clear(buf);
-
-        ssd1306_draw_text(buf, 0, 0, "SCANNING...");
-
-        ssd1306_draw_line(buf, i, 0, i, 31);
-
-        ssd1306_render_full(buf, &area);
-
-        sleep_ms(10);
-    }
-
-    // =========================================================
-    // 6. FILL TEST (FULL SCREEN BLINK)
-    // =========================================================
-    for (int k = 0; k < 3; k++) {
-
-        for (int i = 0; i < SSD1306_BUF_LEN; i++) {
-            buf[i] = 0xFF;
-        }
-
-        ssd1306_render_full(buf, &area);
-        sleep_ms(300);
-
-        ssd1306_clear(buf);
-        ssd1306_render_full(buf, &area);
-        sleep_ms(300);
-    }
-
-    // =========================================================
-    // LOOP FINAL
-    // =========================================================
-    while (1) {
-
-        gpio_put(LED, 1);
-        sleep_ms(200);
-        gpio_put(LED, 0);
-        sleep_ms(200);
+        printf("%.2f,%.2f,%.2f,1000,3000\n",
+               filtered,
+               smoothBpm,
+               bpm);
     }
 }
