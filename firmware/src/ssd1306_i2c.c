@@ -68,14 +68,16 @@ void ssd1306_send_buffer(uint8_t *buf, ssd1306_render_area_t *area) {
 
     send_cmd_list(cmd, sizeof(cmd));
 
-    uint8_t *tmp = malloc(area->buflen + 1);
+    static uint8_t tmp[SSD1306_BUF_LEN-1];
+
+    //uint8_t *tmp = malloc(area->buflen + 1);
     tmp[0] = 0x40;
 
     memcpy(tmp + 1, buf, area->buflen);
 
     i2c_write_blocking(i2c_default, SSD1306_I2C_ADDR, tmp, area->buflen + 1, false);
 
-    free(tmp);
+    //free(tmp);
 }
 
 // ================= PIXEL =================
