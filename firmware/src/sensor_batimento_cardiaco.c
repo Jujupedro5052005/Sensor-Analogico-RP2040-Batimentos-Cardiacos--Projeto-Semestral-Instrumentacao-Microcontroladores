@@ -10,17 +10,23 @@
 
 #define SENSOR_PIN 26       // GPIO26 = ADC0
 #define BUZZER_PIN 22       // GPIO22 = Buzzer
+#define VIBR_PIN 21         // GPIO21 = Vibracall
+
 #define ADC_INPUT 0         // Canal para o ADC
 #define SDA_INPUT 4         // Pino SDA para comunicação I2C
 #define SCL_INPUT 5         // Pino SCL para comunicação I2C
 
 #define FILTER_WINDOW 2         // # de amostras usadas para suavização inicial do sinal
-#define FINGER_THRESHOLD 1100    // Valor minímo vindo do ADC para considerar a presença do dedo no leitor
+#define FINGER_THRESHOLD 1000   // Valor minímo vindo do ADC para considerar a presença do dedo no leitor
 #define MIN_SAMPLES 50          // # minímo de amostras com sinal no intervalo determinado para consider a presença do dedo
 #define PEAK_WINDOW 50          // Tamanho da janela de análise para detecção de pico
 #define SAMPLE_RATE 100         // Taxa de amostras coletadas
 #define BUFFER_WINDOW 50        // # de amostras utilzadas na média móvel do threshold
 #define BPM_HIST_COUNT 5        // # de amostras utilizadas na suavização do valor do bpm
+
+#define VIBR_THRESHOLD 90       // Threshold para iniciar o exercício de respiração
+#define IN_TIME 4               // Tempo de inspiração
+#define OUT_TIME 8              // Tempo de expiração
 
 // =========================
 // VARIÁVEIS GLOBAIS
@@ -53,8 +59,18 @@ float bpm_history[BPM_HIST_COUNT] = {0}; // Buffer para cálculo da média ariti
 int bpm_hist_idx = 0; // Indíce do bpm_history
 
 int last_peak_idx = 0; // # da amostra do último pico detectado
+
+bool ex = false; // Flag para se, se inicou um exercício de respiração
+
+int in_idx = 0; // # da amostra que se iniciou a fase de inspiração do exercício
+bool in = false; // Flag se, se está na fase de inspiração do exercício
+
+int out_idx = 0; // # da amostra que se iniciou a fase de expiração do exercício
+bool out = false; // Flag se, se está na fase de expiração do exercício
     
 repeating_timer_t timer; // Timer para interrupção
+
+repeating_timer_t timer_vibr;
 
 uint8_t oled_buf[SSD1306_BUF_LEN]; // Cria buffer para o OLED
 
@@ -190,7 +206,7 @@ void process_sample(uint16_t raw){
 
                         add_bpm(bpm); // Suaviza o sinal de bpm
 
-                        printf("BPM= %.1f\n", smoothBpm); // print para debug
+                        //printf("BPM= %.1f\n", smoothBpm); // print para debug
 
 
                         }
@@ -212,7 +228,7 @@ void process_sample(uint16_t raw){
 
     gpio_put(BUZZER_PIN, 0); // Desativa o buzzer
 
-    printf("%u\n", raw); // Print para debug
+    //printf("%u\n", raw); // Print para debug
 } 
 
 bool sample_timer_callback(repeating_timer_t *t){ // Função chamada pelo timer
@@ -221,6 +237,35 @@ bool sample_timer_callback(repeating_timer_t *t){ // Função chamada pelo timer
     uint16_t raw = adc_read(); // Lê o sinal do adc
     process_sample(raw); // Chama a função que trata e interpreta o sinal
 
+    return true;
+}
+
+bool vibr_callback(repeating_timer_t *t){ // Callback para o exercício de respiração
+    if(smoothBpm >= VIBR_THRESHOLD || ex == true)
+    { // Condição para o loop é se o bpm está acima do threshold ou se a flag de ex está alta 
+        ex = true; // Ativa a flag de exercício
+        if(in == false && out ==false)
+        { // Caso nenhuma das flags de fase do ex estiver ativada
+            gpio_put(VIBR_PIN, 1); // Liga o vibracall
+            in_idx = sample_counter; // Marca o início da fase de inspiração
+            in = true; // Ativa a flag de inspiração
+        }
+
+        if(((sample_counter - in_idx) >= IN_TIME * SAMPLE_RATE) && in == true)
+        { // Caso tenha se passado o tempo determinado e ainda se está na fase de inspiração
+            gpio_put(VIBR_PIN, 0); // Desliga o vibracall
+            in = false; // Desativa a flag de inspiração
+            out = true; // Ativa a flag de expiração
+            out_idx = sample_counter; // Marca o início da fase de expiração
+        }
+
+        if(((sample_counter - out_idx) >= OUT_TIME * SAMPLE_RATE) && out == true)
+        { // Caso tenha se passado o tempo determinado e ainda se está na fase de expiração
+            out = false; // Desativa a flag de expiração
+            ex = false; // Desativa a flag de exercício
+        }
+
+    }
     return true;
 }
 
@@ -266,6 +311,10 @@ void update_display(void){
 int main() {
 
     stdio_init_all();
+
+    gpio_init(VIBR_PIN);
+    gpio_set_dir(VIBR_PIN, GPIO_OUT);
+    gpio_put(VIBR_PIN, 0);
 
     // =========================
     // BUZZER INIT
@@ -313,6 +362,8 @@ int main() {
 
     // Define o timer para leitura e tratamento do sinal
     add_repeating_timer_ms(10, sample_timer_callback, NULL, &timer);
+
+    add_repeating_timer_ms(10, vibr_callback, NULL, &timer_vibr);
         
     while (true) {
 
