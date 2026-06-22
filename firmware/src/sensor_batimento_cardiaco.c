@@ -68,9 +68,9 @@ bool in = false; // Flag se, se está na fase de inspiração do exercício
 int out_idx = 0; // # da amostra que se iniciou a fase de expiração do exercício
 bool out = false; // Flag se, se está na fase de expiração do exercício
     
-repeating_timer_t timer; // Timer para interrupção
+repeating_timer_t timer; // Timer para processamento de dados
 
-repeating_timer_t timer_vibr;
+repeating_timer_t timer_vibr; // Timer para o exercício de respiração
 
 uint8_t oled_buf[SSD1306_BUF_LEN]; // Cria buffer para o OLED
 
@@ -104,7 +104,7 @@ void process_sample(uint16_t raw){
     static float signal[3] = {0};
 
     // =========================
-    // Filtro média móvel
+    // Filtro média aritmética
     // =========================
 
     filter_buffer[filter_idx] = raw; // Atualiza a lista dos dados lidos
@@ -185,7 +185,7 @@ void process_sample(uint16_t raw){
         {   // Verifica se o candidato a pico supera o threshold móvel
             if(last_peak_idx >= 0)
             {
-                // Calculo intervalo entre o pico atual e o anterio 
+                // Calculo do intervalo entre o pico atual e o anterior 
                 // no dominio de # de amostras
                 int delta_samples = candidate_peak_idx - last_peak_idx;
 
