@@ -8,13 +8,13 @@
 // CONFIG
 // =========================
 
-#define SENSOR_PIN 26       // GPIO26 = ADC0
-#define BUZZER_PIN 22       // GPIO22 = Buzzer
-#define VIBR_PIN 21         // GPIO21 = Vibracall
+#define SENSOR_PIN 26           // GPIO26 = ADC0
+#define BUZZER_PIN 22           // GPIO22 = Buzzer
+#define VIBR_PIN 20             // GPIO21 = Vibracall
 
-#define ADC_INPUT 0         // Canal para o ADC
-#define SDA_INPUT 4         // Pino SDA para comunicação I2C
-#define SCL_INPUT 5         // Pino SCL para comunicação I2C
+#define ADC_INPUT 0             // Canal para o ADC
+#define SDA_INPUT 4             // Pino SDA para comunicação I2C
+#define SCL_INPUT 5             // Pino SCL para comunicação I2C
 
 #define FILTER_WINDOW 2         // # de amostras usadas para suavização inicial do sinal
 #define FINGER_THRESHOLD 1000   // Valor minímo vindo do ADC para considerar a presença do dedo no leitor
@@ -24,55 +24,66 @@
 #define BUFFER_WINDOW 50        // # de amostras utilzadas na média móvel do threshold
 #define BPM_HIST_COUNT 5        // # de amostras utilizadas na suavização do valor do bpm
 
-#define VIBR_THRESHOLD 90       // Threshold para iniciar o exercício de respiração
-#define IN_TIME 4               // Tempo de inspiração
-#define OUT_TIME 8              // Tempo de expiração
+//#define VIBR_THRESHOLD 90       // Threshold para iniciar o exercício de respiração
+#define VIBR_THRESHOLD 50
+#define IN_TIME 2               // Tempo de inspiração
+#define OUT_TIME 4              // Tempo de expiração
+
+#define BUZZ_DELAY 50           // Tempo para beep do buzzer
+#define BUZZ_ON 1               // Buzzer ativo ou não
+
+#define DEBUG 1                 // Print de leitura do ADC read no Monitor Serial (DEBUG=1)
 
 // =========================
 // VARIÁVEIS GLOBAIS
 // =========================
 
-float prev_filtered = 0.0f; // filtered age como a sinal suavizada
+float prev_filtered = 0.0f;                     // filtered age como a sinal suavizada
 
-float bpm = 0.0f; // BPM instântaneo
-float smoothBpm = 0.0f; // BPM filtrado
+uint16_t raw = 0;                               // Leitura do ADC
+float bpm = 0.0f;                               // BPM instântaneo
+float smoothBpm = 0.0f;                         // BPM filtrado
 
-float filter_buffer[FILTER_WINDOW] = {0}; // Buffer para suavização do sinal lido
-int filter_idx = 0; // Indíce do filter_buffer
+float filter_buffer[FILTER_WINDOW] = {0};       // Buffer para suavização do sinal lido
+int filter_idx = 0;                             // Indíce do filter_buffer
 
-float threshold = FINGER_THRESHOLD; // Valor minímo que o sinal deve ter para ser considerado um pico
+float threshold = FINGER_THRESHOLD;             // Valor minímo que o sinal deve ter para ser considerado um pico
 
-float buffer[BUFFER_WINDOW] = {0}; // Buffer para cálculo da média móvel do threshol
-int buffer_idx = 0; // Indíce do buffer
+float buffer[BUFFER_WINDOW] = {0};              // Buffer para cálculo da média móvel do threshol
+int buffer_idx = 0;                             // Indíce do buffer
 
-int valid_count = 0; // # de amostras em que a condição da presença do dedo foi satisfeita
-bool has_finger = false; // Guarda se o dedo foi detectado
+int valid_count = 0;                            // # de amostras em que a condição da presença do dedo foi satisfeita
+bool has_finger = false;                        // Guarda se o dedo foi detectado
 
-int sample_counter = 0; // Guarda o número de amostras tratadas
+int pulse_buz = 0;                              // Guarda flag para dar um beep no buzzer
+bool buzz_active = false;
+int buzz_end_sample = 0;
 
-float candidate_peak_value = 0; // Candidato a pico mais alto da janela de amostra
-int candidate_peak_idx = 0; // # da amostra do ca
+int sample_counter = 0;                         // Guarda o número de amostras tratadas
 
-int samples_since_candidate = 0; // # de amostras desde o último candidato a pico
+float candidate_peak_value = 0;                 // Candidato a pico mais alto da janela de amostra
+int candidate_peak_idx = 0;                     // # da amostra do ca
 
-float bpm_history[BPM_HIST_COUNT] = {0}; // Buffer para cálculo da média aritimérica dos bpm detectados
-int bpm_hist_idx = 0; // Indíce do bpm_history
+int samples_since_candidate = 0;                // # de amostras desde o último candidato a pico
 
-int last_peak_idx = 0; // # da amostra do último pico detectado
+float bpm_history[BPM_HIST_COUNT] = {0};        // Buffer para cálculo da média aritimérica dos bpm detectados
+int bpm_hist_idx = 0;                           // Indíce do bpm_history
 
-bool ex = false; // Flag para se, se inicou um exercício de respiração
+int last_peak_idx = 0;                          // # da amostra do último pico detectado
 
-int in_idx = 0; // # da amostra que se iniciou a fase de inspiração do exercício
-bool in = false; // Flag se, se está na fase de inspiração do exercício
+bool ex = false;                                // Flag para se, se inicou um exercício de respiração
 
-int out_idx = 0; // # da amostra que se iniciou a fase de expiração do exercício
-bool out = false; // Flag se, se está na fase de expiração do exercício
+int in_idx = 0;                                 // # da amostra que se iniciou a fase de inspiração do exercício
+bool in = false;                                // Flag se, se está na fase de inspiração do exercício
+
+int out_idx = 0;                                // # da amostra que se iniciou a fase de expiração do exercício
+bool out = false;                               // Flag se, se está na fase de expiração do exercício
     
-repeating_timer_t timer; // Timer para processamento de dados
+repeating_timer_t timer;                        // Timer para processamento de dados
+repeating_timer_t timer_vibr;                   // Timer para o exercício de respiração
+repeating_timer_t timer_buzz;                   // Timer para o beep do buzzer
 
-repeating_timer_t timer_vibr; // Timer para o exercício de respiração
-
-uint8_t oled_buf[SSD1306_BUF_LEN]; // Cria buffer para o OLED
+uint8_t oled_buf[SSD1306_BUF_LEN];              // Cria buffer para o OLED
 
 ssd1306_render_area_t area={ // Cria área de renderização na tela do OLED
     .start_col = 0,
@@ -81,6 +92,9 @@ ssd1306_render_area_t area={ // Cria área de renderização na tela do OLED
     .end_page = SSD1306_NUM_PAGES -1
 };
 
+// =========================
+// FUNÇÕES HELPERS
+// =========================
 
 void add_bpm(float new_bpm){
     // Função para suavização da medida do bpm
@@ -97,7 +111,8 @@ void add_bpm(float new_bpm){
     smoothBpm = bpm_sum / BPM_HIST_COUNT; // Média aritmética do bpm
 }
 
-void process_sample(uint16_t raw){
+
+void process_sample(){
     // Função para tratamento do sinal
 
     // Guarda o sinal lido para detecção de máximo local
@@ -137,7 +152,7 @@ void process_sample(uint16_t raw){
     // Detecção de dedo
     // =========================
 
-    if(filtered > FINGER_THRESHOLD && filtered < 4095){
+    if(filtered < FINGER_THRESHOLD || filtered == 4095){
         valid_count++;
     }
     else{
@@ -146,7 +161,7 @@ void process_sample(uint16_t raw){
 
     // Sinal deve estar dentro de um intervalo determinado por tempo suficiente
     // para que seja considerado a presença do dedo
-    has_finger = (valid_count >= MIN_SAMPLES);
+    has_finger = !(valid_count >= MIN_SAMPLES);
 
     // =========================
     // Atualiza signal
@@ -198,16 +213,20 @@ void process_sample(uint16_t raw){
 
                     if(bpm_candidate >= 30 &&
                        bpm_candidate <= 200)
-                       {    // Verifica se bpm tem um valor válido
+                       { // Verifica se bpm tem um valor válido
 
-                        gpio_put(BUZZER_PIN, 1); // Liga o buzzer indicando detecção de pico
+                        if(has_finger==1)
+                        { // Liga o buzzer indicando detecção de pico
+                            gpio_put(BUZZER_PIN, 1);
+                            buzz_active = true;
+                            buzz_end_sample = sample_counter + (BUZZ_DELAY * SAMPLE_RATE) / 1000;
+                        }
 
                         bpm = bpm_candidate;
 
                         add_bpm(bpm); // Suaviza o sinal de bpm
 
                         //printf("BPM= %.1f\n", smoothBpm); // print para debug
-
 
                         }
                 }
@@ -226,23 +245,34 @@ void process_sample(uint16_t raw){
 
     sample_counter++; // Atualiza o # de amostras lidas
 
-    gpio_put(BUZZER_PIN, 0); // Desativa o buzzer
+    if(buzz_active)
+    { // Desativa o buzzer
+        if(sample_counter >= buzz_end_sample)
+        {
+            gpio_put(BUZZER_PIN, 0);
+            buzz_active = false;
+        }
+    }
 
-    //printf("%u\n", raw); // Print para debug
-} 
+    if(DEBUG==1){
+        printf("%u\n", raw); // Print para debug
+    }
+}
+
 
 bool sample_timer_callback(repeating_timer_t *t){ // Função chamada pelo timer
     // Aciona a leitura de dados
 
-    uint16_t raw = adc_read(); // Lê o sinal do adc
-    process_sample(raw); // Chama a função que trata e interpreta o sinal
+    raw = adc_read(); // Lê o sinal do adc
+    process_sample(); // Chama a função que trata e interpreta o sinal
 
     return true;
 }
 
+
 bool vibr_callback(repeating_timer_t *t){ // Callback para o exercício de respiração
-    if(smoothBpm >= VIBR_THRESHOLD || ex == true)
-    { // Condição para o loop é se o bpm está acima do threshold ou se a flag de ex está alta 
+    if(has_finger && (smoothBpm >= VIBR_THRESHOLD || ex == true))
+    { // Condição para o loop é se o bpm está acima do threshold ou se a flag de ex está alta (e o dedo esta inserido)
         ex = true; // Ativa a flag de exercício
         if(in == false && out ==false)
         { // Caso nenhuma das flags de fase do ex estiver ativada
@@ -265,14 +295,30 @@ bool vibr_callback(repeating_timer_t *t){ // Callback para o exercício de respi
             ex = false; // Desativa a flag de exercício
         }
 
+    } else{
+        gpio_put(VIBR_PIN, 0);
+        ex = false;
     }
     return true;
 }
+
+
+bool buzz_callback(repeating_timer_t *t){ // Callback para o beep do buzzer
+    if(pulse_buz==1 && gpio_get(BUZZER_PIN)==0 && BUZZ_ON==1)
+    { // Caso queira dar um beep no buzzer
+        gpio_put(BUZZER_PIN, 1); // Liga o buzzer indicando detecção de pico
+
+        gpio_put(BUZZER_PIN, 0); // Desliga o buzzer
+    }
+    return true;
+}
+
 
 void update_display(void){
     // Função para atualizar o display
 
     char bpm_text[32];
+    char finger_text[32];
 
     ssd1306_clear(oled_buf); // Limpa o texto do OLED
 
@@ -285,16 +331,28 @@ void update_display(void){
 
     sprintf( // Converte numero em texto
         bpm_text,
-        "BPM %d\nDedo %s",
-        (int)smoothBpm,
-        has_finger ? "Detectado" : "Ausente"
+        "BPM %d\n",
+        (int)smoothBpm
     );
 
     ssd1306_draw_text( // Escreve o texto no display
         oled_buf,
         0,
-        16,
+        10,
         bpm_text
+    );
+
+    sprintf( // Converte numero em texto
+        finger_text,
+        "FINGER %s",
+        has_finger ? "Detected" : "Not Detected"
+    );
+
+    ssd1306_draw_text( // Escreve o texto no display
+        oled_buf,
+        0,
+        20,
+        finger_text
     );
 
     ssd1306_render_full( // Atualiza efetivamente o display
@@ -307,6 +365,14 @@ void update_display(void){
 // =========================
 // MAIN
 // =========================
+
+int main1() {
+    stdio_init_all();
+    gpio_init(BUZZER_PIN);
+    gpio_set_dir(BUZZER_PIN, GPIO_OUT);
+    gpio_put(BUZZER_PIN, 1);
+
+}
 
 int main() {
 
@@ -362,8 +428,8 @@ int main() {
 
     // Define o timer para leitura e tratamento do sinal
     add_repeating_timer_ms(10, sample_timer_callback, NULL, &timer);
-
     add_repeating_timer_ms(10, vibr_callback, NULL, &timer_vibr);
+    add_repeating_timer_ms(BUZZ_DELAY, buzz_callback, NULL, &timer_buzz);
         
     while (true) {
 

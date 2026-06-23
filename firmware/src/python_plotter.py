@@ -1,3 +1,4 @@
+# !pip install pyserial matplotlib numpy
 import serial
 import time
 import matplotlib.pyplot as plt
@@ -14,7 +15,9 @@ PEAK_WINDOW = 50
 
 SAMPLE_RATE = 100
 
-BUFFER_WINDOW = 50
+BUFFER_WINDOW = 1
+
+THRESHOLD_OFFSET = 0
 
 last_peak_idx = None
 bpm = 0
@@ -39,7 +42,7 @@ buffer = deque(maxlen=BUFFER_WINDOW)
 # SERIAL
 # =========================
 
-PORT = "COM14"
+PORT = "COM4"
 BAUD = 115200
 
 ser = serial.Serial(PORT, BAUD, timeout=1)
@@ -114,7 +117,7 @@ def update(frame):
             if len(buffer) == BUFFER_WINDOW:
                 moving_average = sum(buffer) / BUFFER_WINDOW
 
-                threshold = moving_average + 100
+                threshold = moving_average + THRESHOLD_OFFSET
 
             global valid_count, has_finger
             
