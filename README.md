@@ -57,7 +57,7 @@ Ou seja, as oscilações periódicas do sinal PPG permitem calcular a frequênci
 
 ## Fluxograma da lógica de programação
 <p align="center">
-  <img src="docs/imagens/Figura 2 - Diagrama de blocos da manipulação do sinal.png" alt="Leitura no ADC, filtros de média móvel digitais, detecção de picos e cálculo do BPM" width="100%">
+  <img src="docs/imagens/Figura 10 – Fluxograma da lógica de programação.png" alt="Leitura no ADC, filtros de média móvel digitais, detecção de picos e cálculo do BPM" width="100%">
 </p>
 
 # 🔌 Hardware Utilizado
