@@ -126,6 +126,7 @@ O firmware foi desenvolvido em:
 ├── docs/
 │   ├── relatorio/
 │   ├── apresentacao/
+│   ├── videos/
 │   └── imagens/
 │
 └── README.md
@@ -148,37 +149,25 @@ O objetivo é melhorar a relação sinal-ruído e permitir medições mais confi
 # 📸 Fotos do Projeto
 
 ## Protótipo
-
-> Inserir imagem do protótipo aqui
-
 <p align="center">
   <img src="docs/imagens/Figura 5 – Protótipo inicial analisado com osciloscópio.png" alt="Leitura no ADC, filtros de média móvel digitais, detecção de picos e cálculo do BPM" width="100%">
 </p>
 
 ## Esquema elétrico
-
-> Inserir imagem do esquemático aqui
-
 <p align="center">
   <img src="docs/imagens/Figura 4 – Circuito analógico para tratamento do sinal.png" alt="Leitura no ADC, filtros de média móvel digitais, detecção de picos e cálculo do BPM" width="100%">
 </p>
 
 
 # PCB
-
-> Inserir imagem da PCB aqui
-
 <p align="center">
   <img src="docs/imagens/Figura 6 – PCI feita no EasyEDA, na esquerda, e ela após sair da CNC, na direita.png" alt="Leitura no ADC, filtros de média móvel digitais, detecção de picos e cálculo do BPM" width="100%">
 </p>
 
 # 🎥 Vídeo de Funcionamento
-
-> Inserir link do vídeo demonstrativo
-
-```text
-youtube.com/(alguma coisa)
-```
+<p align="center">
+  <img src="docs/videos/Video de Funcionamento.mp4" alt="Leitura no ADC, filtros de média móvel digitais, detecção de picos e cálculo do BPM" width="100%">
+</p>
 
 # 📄 Relatório Técnico
 
