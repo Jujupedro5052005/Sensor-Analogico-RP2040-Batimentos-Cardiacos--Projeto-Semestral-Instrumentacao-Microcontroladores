@@ -1,182 +1,443 @@
-/*
 #include <stdio.h>
 #include "pico/stdlib.h"
-#include "hardware/spi.h"
+#include "hardware/adc.h"
 #include "hardware/i2c.h"
-#include "hardware/uart.h"
+#include "ssd1306.h"
 
-// SPI Defines
-// We are going to use SPI 0, and allocate it to the following GPIO pins
-// Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
-#define SPI_PORT spi0
-#define PIN_MISO 16
-#define PIN_CS   17
-#define PIN_SCK  18
-#define PIN_MOSI 19
+// =========================
+// CONFIG
+// =========================
 
-// I2C defines
-// This example will use I2C0 on GPIO8 (SDA) and GPIO9 (SCL) running at 400KHz.
-// Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
-#define I2C_PORT i2c0
-#define I2C_SDA 8
-#define I2C_SCL 9
+#define SENSOR_PIN 26           // GPIO26 = ADC0
+#define BUZZER_PIN 22           // GPIO22 = Buzzer
+#define VIBR_PIN 20             // GPIO21 = Vibracall
 
-// UART defines
-// By default the stdout UART is `uart0`, so we will use the second one
-#define UART_ID uart1
-#define BAUD_RATE 115200
+#define ADC_INPUT 0             // Canal para o ADC
+#define SDA_INPUT 4             // Pino SDA para comunicação I2C
+#define SCL_INPUT 5             // Pino SCL para comunicação I2C
 
-// Use pins 4 and 5 for UART1
-// Pins can be changed, see the GPIO function select table in the datasheet for information on GPIO assignments
-#define UART_TX_PIN 4
-#define UART_RX_PIN 5
+#define FILTER_WINDOW 2         // # de amostras usadas para suavização inicial do sinal
+#define FINGER_THRESHOLD 1000   // Valor minímo vindo do ADC para considerar a presença do dedo no leitor
+#define MIN_SAMPLES 50          // # minímo de amostras com sinal no intervalo determinado para consider a presença do dedo
+#define PEAK_WINDOW 50          // Tamanho da janela de análise para detecção de pico
+#define SAMPLE_RATE 100         // Taxa de amostras coletadas
+#define BUFFER_WINDOW 50        // # de amostras utilzadas na média móvel do threshold
+#define BPM_HIST_COUNT 5        // # de amostras utilizadas na suavização do valor do bpm
+
+//#define VIBR_THRESHOLD 90       // Threshold para iniciar o exercício de respiração
+#define VIBR_THRESHOLD 50
+#define IN_TIME 2               // Tempo de inspiração
+#define OUT_TIME 4              // Tempo de expiração
+
+#define BUZZ_DELAY 50           // Tempo para beep do buzzer
+#define BUZZ_ON 1               // Buzzer ativo ou não
+
+#define DEBUG 1                 // Print de leitura do ADC read no Monitor Serial (DEBUG=1)
+
+// =========================
+// VARIÁVEIS GLOBAIS
+// =========================
+
+float prev_filtered = 0.0f;                     // filtered age como a sinal suavizada
+
+uint16_t raw = 0;                               // Leitura do ADC
+float bpm = 0.0f;                               // BPM instântaneo
+float smoothBpm = 0.0f;                         // BPM filtrado
+
+float filter_buffer[FILTER_WINDOW] = {0};       // Buffer para suavização do sinal lido
+int filter_idx = 0;                             // Indíce do filter_buffer
+
+float threshold = FINGER_THRESHOLD;             // Valor minímo que o sinal deve ter para ser considerado um pico
+
+float buffer[BUFFER_WINDOW] = {0};              // Buffer para cálculo da média móvel do threshol
+int buffer_idx = 0;                             // Indíce do buffer
+
+int valid_count = 0;                            // # de amostras em que a condição da presença do dedo foi satisfeita
+bool has_finger = false;                        // Guarda se o dedo foi detectado
+
+int pulse_buz = 0;                              // Guarda flag para dar um beep no buzzer
+bool buzz_active = false;
+int buzz_end_sample = 0;
+
+int sample_counter = 0;                         // Guarda o número de amostras tratadas
+
+float candidate_peak_value = 0;                 // Candidato a pico mais alto da janela de amostra
+int candidate_peak_idx = 0;                     // # da amostra do ca
+
+int samples_since_candidate = 0;                // # de amostras desde o último candidato a pico
+
+float bpm_history[BPM_HIST_COUNT] = {0};        // Buffer para cálculo da média aritimérica dos bpm detectados
+int bpm_hist_idx = 0;                           // Indíce do bpm_history
+
+int last_peak_idx = 0;                          // # da amostra do último pico detectado
+
+bool ex = false;                                // Flag para se, se inicou um exercício de respiração
+
+int in_idx = 0;                                 // # da amostra que se iniciou a fase de inspiração do exercício
+bool in = false;                                // Flag se, se está na fase de inspiração do exercício
+
+int out_idx = 0;                                // # da amostra que se iniciou a fase de expiração do exercício
+bool out = false;                               // Flag se, se está na fase de expiração do exercício
+    
+repeating_timer_t timer;                        // Timer para processamento de dados
+repeating_timer_t timer_vibr;                   // Timer para o exercício de respiração
+repeating_timer_t timer_buzz;                   // Timer para o beep do buzzer
+
+uint8_t oled_buf[SSD1306_BUF_LEN];              // Cria buffer para o OLED
+
+ssd1306_render_area_t area={ // Cria área de renderização na tela do OLED
+    .start_col = 0,
+    .end_col = 127,
+    .start_page = 0,
+    .end_page = SSD1306_NUM_PAGES -1
+};
+
+// =========================
+// FUNÇÕES HELPERS
+// =========================
+
+void add_bpm(float new_bpm){
+    // Função para suavização da medida do bpm
+    bpm_history[bpm_hist_idx] = new_bpm; // Atualiza o histórico de bpm
+
+    // Atualiza o indice e "anda" na lista
+    bpm_hist_idx = (bpm_hist_idx + 1) % 5; 
+
+    float bpm_sum = 0; // Reinicia bpm_sum
+
+    // Faz a soma dos bpm guardados no histórico
+    for(int i=0; i < BPM_HIST_COUNT; i++){bpm_sum += bpm_history[i];}
+
+    smoothBpm = bpm_sum / BPM_HIST_COUNT; // Média aritmética do bpm
+}
 
 
+void process_sample(){
+    // Função para tratamento do sinal
 
-int main()
-{
+    // Guarda o sinal lido para detecção de máximo local
+    static float signal[3] = {0};
+
+    // =========================
+    // Filtro média aritmética
+    // =========================
+
+    filter_buffer[filter_idx] = raw; // Atualiza a lista dos dados lidos
+    filter_idx = (filter_idx + 1) % FILTER_WINDOW; // Atualiza o índice
+
+    float filtered = 0; // Reinicializa o valor filtrado de raw
+
+    // Calcula o valor filtrado do sinal lido
+    for(int i=0; i < FILTER_WINDOW; i++){
+        filtered += filter_buffer[i];
+    }
+    filtered /= FILTER_WINDOW;
+
+    // =========================
+    // Threshold móvel
+    // =========================
+
+    // Atualiza a lista dos valores que serão usados no threshold móvel
+    buffer[buffer_idx] = filtered; 
+    buffer_idx = (buffer_idx + 1) % BUFFER_WINDOW; // Atualiza o índice
+
+    float moving_average = 0; // Reinicia moving_average
+
+    // Calcula o threshold móvel
+    for(int i=0; i < BUFFER_WINDOW; i++){moving_average+=buffer[i];}
+    moving_average/=BUFFER_WINDOW;
+    threshold = moving_average + 100;
+
+    // =========================
+    // Detecção de dedo
+    // =========================
+
+    if(filtered < FINGER_THRESHOLD || filtered == 4095){
+        valid_count++;
+    }
+    else{
+        valid_count = 0;
+    }
+
+    // Sinal deve estar dentro de um intervalo determinado por tempo suficiente
+    // para que seja considerado a presença do dedo
+    has_finger = !(valid_count >= MIN_SAMPLES);
+
+    // =========================
+    // Atualiza signal
+    // =========================
+
+    signal[0] = signal[1];
+    signal[1] = signal[2];
+    signal[2] = filtered;
+        
+    // =========================
+    // Máximo local
+    // =========================
+
+    // Dado que signal[1] é um máximo local ele é considera um candidato a pico do 
+    // sinal do batimento cardíaco
+    if(signal[1] > signal[0] &&
+       signal[1] > signal[2])
+    {
+        if(signal[1] > candidate_peak_value) 
+        {   // Caso signal[1] seja um máximo local ele vira um candidato a pico
+            candidate_peak_value = signal[1];
+            candidate_peak_idx = sample_counter - 1;
+        }
+    }
+        
+    samples_since_candidate++;
+
+    // =========================
+    // Final da janela
+    // =========================
+
+    if(samples_since_candidate >= PEAK_WINDOW)
+    {   // Verifica se chegou no fim da janela de análise
+        // para então fazer a detecção de pico
+        if(candidate_peak_value >= threshold)
+        {   // Verifica se o candidato a pico supera o threshold móvel
+            if(last_peak_idx >= 0)
+            {
+                // Calculo do intervalo entre o pico atual e o anterior 
+                // no dominio de # de amostras
+                int delta_samples = candidate_peak_idx - last_peak_idx;
+
+                // Converte delta do dominio de amostras para o dominio de tempo
+                float delta_seconds = (float)delta_samples / SAMPLE_RATE; 
+                if(delta_seconds > 0)
+                {
+                    // Converte delta em bpm
+                    float bpm_candidate = 60.0f / delta_seconds;
+
+                    if(bpm_candidate >= 30 &&
+                       bpm_candidate <= 200)
+                       { // Verifica se bpm tem um valor válido
+
+                        if(has_finger==1)
+                        { // Liga o buzzer indicando detecção de pico
+                            gpio_put(BUZZER_PIN, 1);
+                            buzz_active = true;
+                            buzz_end_sample = sample_counter + (BUZZ_DELAY * SAMPLE_RATE) / 1000;
+                        }
+
+                        bpm = bpm_candidate;
+
+                        add_bpm(bpm); // Suaviza o sinal de bpm
+
+                        //printf("BPM= %.1f\n", smoothBpm); // print para debug
+
+                        }
+                }
+            }
+
+            last_peak_idx = candidate_peak_idx; // Atualiza o indíce de pico detectado
+
+        }
+
+        // Reinicia os valores para próxima janela de análise
+        candidate_peak_value = 0;
+        candidate_peak_idx = 0;
+        samples_since_candidate = 0;
+
+    }
+
+    sample_counter++; // Atualiza o # de amostras lidas
+
+    if(buzz_active)
+    { // Desativa o buzzer
+        if(sample_counter >= buzz_end_sample)
+        {
+            gpio_put(BUZZER_PIN, 0);
+            buzz_active = false;
+        }
+    }
+
+    if(DEBUG==1){
+        printf("%u\n", raw); // Print para debug
+    }
+}
+
+
+bool sample_timer_callback(repeating_timer_t *t){ // Função chamada pelo timer
+    // Aciona a leitura de dados
+
+    raw = adc_read(); // Lê o sinal do adc
+    process_sample(); // Chama a função que trata e interpreta o sinal
+
+    return true;
+}
+
+
+bool vibr_callback(repeating_timer_t *t){ // Callback para o exercício de respiração
+    if(has_finger && (smoothBpm >= VIBR_THRESHOLD || ex == true))
+    { // Condição para o loop é se o bpm está acima do threshold ou se a flag de ex está alta (e o dedo esta inserido)
+        ex = true; // Ativa a flag de exercício
+        if(in == false && out ==false)
+        { // Caso nenhuma das flags de fase do ex estiver ativada
+            gpio_put(VIBR_PIN, 1); // Liga o vibracall
+            in_idx = sample_counter; // Marca o início da fase de inspiração
+            in = true; // Ativa a flag de inspiração
+        }
+
+        if(((sample_counter - in_idx) >= IN_TIME * SAMPLE_RATE) && in == true)
+        { // Caso tenha se passado o tempo determinado e ainda se está na fase de inspiração
+            gpio_put(VIBR_PIN, 0); // Desliga o vibracall
+            in = false; // Desativa a flag de inspiração
+            out = true; // Ativa a flag de expiração
+            out_idx = sample_counter; // Marca o início da fase de expiração
+        }
+
+        if(((sample_counter - out_idx) >= OUT_TIME * SAMPLE_RATE) && out == true)
+        { // Caso tenha se passado o tempo determinado e ainda se está na fase de expiração
+            out = false; // Desativa a flag de expiração
+            ex = false; // Desativa a flag de exercício
+        }
+
+    } else{
+        gpio_put(VIBR_PIN, 0);
+        ex = false;
+    }
+    return true;
+}
+
+
+bool buzz_callback(repeating_timer_t *t){ // Callback para o beep do buzzer
+    if(pulse_buz==1 && gpio_get(BUZZER_PIN)==0 && BUZZ_ON==1)
+    { // Caso queira dar um beep no buzzer
+        gpio_put(BUZZER_PIN, 1); // Liga o buzzer indicando detecção de pico
+
+        gpio_put(BUZZER_PIN, 0); // Desliga o buzzer
+    }
+    return true;
+}
+
+
+void update_display(void){
+    // Função para atualizar o display
+
+    char bpm_text[32];
+    char finger_text[32];
+
+    ssd1306_clear(oled_buf); // Limpa o texto do OLED
+
+    ssd1306_draw_text( // Escreve no OLED
+        oled_buf,
+        0,
+        0,
+        "HEART RATE"
+    );
+
+    sprintf( // Converte numero em texto
+        bpm_text,
+        "BPM %d\n",
+        (int)smoothBpm
+    );
+
+    ssd1306_draw_text( // Escreve o texto no display
+        oled_buf,
+        0,
+        10,
+        bpm_text
+    );
+
+    sprintf( // Converte numero em texto
+        finger_text,
+        "FINGER %s",
+        has_finger ? "Detected" : "Not Detected"
+    );
+
+    ssd1306_draw_text( // Escreve o texto no display
+        oled_buf,
+        0,
+        20,
+        finger_text
+    );
+
+    ssd1306_render_full( // Atualiza efetivamente o display
+        oled_buf,
+        &area
+    );
+
+}
+
+// =========================
+// MAIN
+// =========================
+
+int main1() {
+    stdio_init_all();
+    gpio_init(BUZZER_PIN);
+    gpio_set_dir(BUZZER_PIN, GPIO_OUT);
+    gpio_put(BUZZER_PIN, 1);
+
+}
+
+int main() {
+
     stdio_init_all();
 
-    // SPI initialisation. This example will use SPI at 1MHz.
-    spi_init(SPI_PORT, 1000*1000);
-    gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
-    gpio_set_function(PIN_CS,   GPIO_FUNC_SIO);
-    gpio_set_function(PIN_SCK,  GPIO_FUNC_SPI);
-    gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
-    
-    // Chip select is active-low, so we'll initialise it to a driven-high state
-    gpio_set_dir(PIN_CS, GPIO_OUT);
-    gpio_put(PIN_CS, 1);
-    // For more examples of SPI use see https://github.com/raspberrypi/pico-examples/tree/master/spi
+    gpio_init(VIBR_PIN);
+    gpio_set_dir(VIBR_PIN, GPIO_OUT);
+    gpio_put(VIBR_PIN, 0);
 
-    // I2C Initialisation. Using it at 400Khz.
-    i2c_init(I2C_PORT, 400*1000);
-    
-    gpio_set_function(I2C_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(I2C_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C_SDA);
-    gpio_pull_up(I2C_SCL);
-    // For more examples of I2C use see https://github.com/raspberrypi/pico-examples/tree/master/i2c
+    // =========================
+    // BUZZER INIT
+    // =========================
 
-    // Set up our UART
-    uart_init(UART_ID, BAUD_RATE);
-    // Set the TX and RX pins by using the function select on the GPIO
-    // Set datasheet for more information on function select
-    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
-    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
-    
-    // Use some the various UART functions to send out data
-    // In a default system, printf will also output via the default UART
-    
-    // Send out a string, with CR/LF conversions
-    uart_puts(UART_ID, " Hello, UART!\n");
-    
-    // For more examples of UART use see https://github.com/raspberrypi/pico-examples/tree/master/uart
+    gpio_init(BUZZER_PIN); // Inicializa o pino que aciona o buzzer
+    gpio_set_dir(BUZZER_PIN, GPIO_OUT); // Define o pino como saída
+    gpio_put(BUZZER_PIN, 0); // Inicia o código com ele desligado
 
+    // =========================
+    // I2C INIT
+    // =========================
+
+    i2c_init(i2c_default, 400 * 1000); // Inicializa o i2c
+
+    gpio_set_function(SDA_INPUT, GPIO_FUNC_I2C); // Liga o GPIO4 ao SDA
+    gpio_set_function(SCL_INPUT, GPIO_FUNC_I2C); // Liga o GPIO5 ao SCL
+
+    gpio_pull_up(SDA_INPUT); // Aciona resistores de pull-up internos
+    gpio_pull_up(SCL_INPUT); // Aciona resistores de pull-up internos
+
+    // =========================
+    // SSD1306 INIT
+    // =========================
+
+    ssd1306_init(); // Inicializa o SSD1306
+
+    ssd1306_calc_area(&area); // Calcula qual área do OLED será usada
+
+    // =========================
+    // ADC INIT
+    // =========================
+
+    adc_init(); // Inicializa o adc
+
+    adc_gpio_init(SENSOR_PIN); // Lê o sinal pelo SENSOR_PIN
+
+    adc_select_input(ADC_INPUT); // Seleciona o canal ADC_INPUT
+
+    adc_set_clkdiv(16000); // Clock divider para prevenir flood pelo ADC
+
+    // =========================
+    // CONFIG INTERRUPÇÂO
+    // =========================
+
+    // Define o timer para leitura e tratamento do sinal
+    add_repeating_timer_ms(10, sample_timer_callback, NULL, &timer);
+    add_repeating_timer_ms(10, vibr_callback, NULL, &timer_vibr);
+    add_repeating_timer_ms(BUZZ_DELAY, buzz_callback, NULL, &timer_buzz);
+        
     while (true) {
-        printf("Hello, world!\n");
-        sleep_ms(1000);
+
+        // =========================
+        // EXIBIÇÂO
+        // =========================
+
+        update_display(); // Atualiza o display
+
     }
-}
-
-*/
-
-#include <stdio.h>
-#include "pico/stdlib.h"
-
-#define LED  25
-
-int main1() { // bem baixo nivel -> acessando diretamente os registradores
-
-    // variavel de 32 bits inteira que pode ser modificada a qualquer momento pelo codigo
-    // coloco o * para ser um ponteiro
-    // o valor é o base adress de "2.19.6.1. IO - User Bank"
-    // escolho o GPIO_25_CTRL com endereço de offset 0x0CC
-    volatile uint32_t *io_bank0_gpio_25_ctrl = (uint32_t *)0x400140CC;
-
-    // variavel com o SIO base de "2.3.1.7. List of Registers"
-    // permite habilitar como saida (diretiva de mascara) -> usamos o output enable set
-    // perceba que output enable set eh  GPIO_OE_SET = 0x024
-    // eu somo esse valor no base address 0xd0000000 dos registradores SIO_BASE
-    volatile uint32_t *sio_gpio_oe_set = (uint32_t *)(0xd0000000+0x024);
-
-    // vou usar o XOR para ficar invertendo (efeito de blink)
-    volatile uint32_t *sio_gpio_out_xor = (uint32_t *)0xD000001C;
-
-    // configurar o pino 25 com SIO (coloca 5 no FUNCSEL)
-    *io_bank0_gpio_25_ctrl = 5;
-
-    // colocar o GP25 como saida
-    // uso operação de deslocamento para direita '<<'
-    // se eu fizer o shift 25 vezes, ele para o bit 25, sem precisar calcular na mao
-    *sio_gpio_oe_set = (1 << 25);
-
-    while(1){ // LOOP
-        // mudar o estado do pino 25
-        *sio_gpio_out_xor = (1 << 25);
-
-        // gasta ciclos de clocks
-        sleep_ms(1000);
-
-        // no SDK tenho funcoes de alto nivel que abstraem ainda mais, como digitalWrite
-        // nao preciso ir no registrador
-        // documento "raspberry-pi-pico-c-sdk.pdf" 
-    }
-}
-
-int main2() { // começo a usar o struct do .h para substituir os enderecos
-
-    // variavel com o SIO base de "2.3.1.7. List of Registers"
-    // permite habilitar como saida (diretiva de mascara)
-    volatile uint32_t *sio_gpio_oe_set = (uint32_t *)0xD0000024;
-
-    // vou usar o XOR para ficar invertendo (efeito de blink)
-    volatile uint32_t *sio_gpio_out_xor = (uint32_t *)0xD000001C;
-
-    // OU: fabricante me fornece um constante que ja esta alocada no endereco 
-    // é um struct que já esta no BANK0_BASE, o endereco que copiei antes
-    // ja tem todos os endereços no struct, ai nao preciso fazer o offset a partir do endereco de base do banco 0
-    // '->' é acessar dentro do struct o io
-    // assim, nao preciso mais de *io_bank0_gpio_25_ctrl
-    io_bank0_hw->io[LED].ctrl = GPIO_FUNC_SIO;
-
-    // colocar o GP25 como saida
-    // uso operação de deslocamento para direita '<<'
-    // se eu fizer o shift 25 vezes, ele para o bit 25, sem precisar calcular na mao
-    *sio_gpio_oe_set = (1 << 25);
-
-    while(1){ // LOOP
-
-        // OU: posso usar o toggle
-        sio_hw->gpio_togl = (1 << LED);
-
-        // gasta ciclos de clocks
-        sleep_ms(4000);
-
-        // no SDK tenho funcoes de alto nivel que abstraem ainda mais, como digitalWrite
-        // nao preciso ir no registrador
-        // documento "raspberry-pi-pico-c-sdk.pdf" 
-    }
-}
-
-int main3(){ // usando SDK -> fica mais limpo de entender
-    // substitui o uso do SIO
-    gpio_init(LED);
-
-    // configurar como saida (direcao)
-    // recebe numero do IO e bool para definir entrada ou saida
-    // substitui a diretiva de mascara
-    gpio_set_dir(LED, true);
-
-    while(1){
-        // mascara XOR
-        gpio_xor_mask(1 << LED);
-
-        // delay de 200 ms
-        sleep_ms(200);
-    }
-}
-
-int main(){
-    main3();
 }
