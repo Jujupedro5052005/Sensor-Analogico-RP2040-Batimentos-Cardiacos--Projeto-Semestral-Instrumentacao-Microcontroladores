@@ -166,7 +166,9 @@ O objetivo é melhorar a relação sinal-ruído e permitir medições mais confi
 
 # 🎥 Vídeo de Funcionamento
 <p align="center">
-  <img src="docs/videos/Video de Funcionamento.mp4" alt="Leitura no ADC, filtros de média móvel digitais, detecção de picos e cálculo do BPM" width="100%">
+  <a href="docs/videos/Video de Funcionamento.mp4">
+    🔗 Clique aqui para assistir ao vídeo de funcionamento
+  </a>
 </p>
 
 # 📄 Relatório Técnico
