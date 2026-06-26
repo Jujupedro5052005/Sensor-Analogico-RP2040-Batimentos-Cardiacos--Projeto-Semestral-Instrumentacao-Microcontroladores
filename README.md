@@ -1,4 +1,4 @@
-# Monitor Portátil de Frequência Cardíaca e Saturação de Oxigênio
+# Monitor Portátil de Frequência Cardíaca
 
 <p align="center">
   <img src="docs/imagens/Foto Capa.png" alt="Banner do Projeto" width="100%">
@@ -6,12 +6,9 @@
 
 ## 📌 Descrição do Projeto
 
-Este projeto consiste no desenvolvimento de um sistema embarcado portátil para monitoramento de sinais vitais, capaz de medir:
+Este projeto consiste no desenvolvimento de um sistema embarcado portátil para monitoramento de sinais vitais, capaz de medir Frequência cardíaca (BPM – Beats Per Minute)
 
-- Frequência cardíaca (BPM – Beats Per Minute)
-- Saturação de oxigênio no sangue (SpO₂)
-
-O sistema é baseado no microcontrolador **RP2040** e utiliza sensores ópticos para aquisição dos sinais biológicos através da técnica de **fotopletismografia (PPG)**, empregando LEDs nas faixas vermelha e infravermelha juntamente com um fotodetector.
+O sistema é baseado no microcontrolador **RP2040** e utiliza sensores ópticos para aquisição dos sinais biológicos através da técnica de **fotopletismografia (PPG)**, empregando LEDs nas faixas infravermelha e juntamente com um fotodetector.
 
 O projeto foi desenvolvido para a disciplina de **Instrumentação e Microcontroladores e Sistemas Microcontrolados**, com foco na aplicação na área da saúde.
 
@@ -32,68 +29,36 @@ O sistema busca fornecer medições básicas de sinais vitais de forma portátil
 
 O projeto utiliza o princípio da **fotopletismografia (PPG)**, técnica óptica que detecta variações no volume sanguíneo através da absorção de luz pelos tecidos.
 
-Dois comprimentos de onda são utilizados:
-
-- 🔴 LED Vermelho (~660 nm)
+É utilizado o comprimento de onda infravermelho:
 - 🔴 LED Infravermelho (~940 nm)
 
-A hemoglobina oxigenada e desoxigenada absorvem essas frequências de forma diferente, permitindo estimar a saturação de oxigênio no sangue (SpO₂).
+A hemoglobina oxigenada e desoxigenada absorvem essas frequências de forma diferente, permitindo perceber a variação da corrente sanguínea nos vasos.
 
-Além disso, as oscilações periódicas do sinal PPG permitem calcular a frequência cardíaca do usuário.
+Ou seja, as oscilações periódicas do sinal PPG permitem calcular a frequência cardíaca do usuário.
 
 # ⚙️ Funcionalidades
 
 - Medição da frequência cardíaca (BPM)
-- Estimativa da saturação de oxigênio (SpO₂)
 - Filtragem analógica e digital do sinal
 - Exibição dos dados em display OLED
 - Comunicação serial via USB/UART
 - Sistema de alertas sonoros
+- Exercicício de respiração com vibracall
 - Estrutura mecânica impressa em 3D
 - PCB dedicada para integração do sistema
 
 # 🧩 Arquitetura do Sistema
 
-## Fluxograma
-
-```text
-          ┌─────────────────────┐
-          │ LEDs Vermelho / IR │
-          └──────────┬──────────┘
-                     │
-                     ▼
-          ┌─────────────────────┐
-          │    Dedo do Usuário  │
-          └──────────┬──────────┘
-                     │ Luz refletida/transmitida
-                     ▼
-          ┌─────────────────────┐
-          │     Fotodiodo       │
-          └──────────┬──────────┘
-                     │
-                     ▼
-          ┌─────────────────────┐
-          │ Condicionamento de │
-          │       Sinais        │
-          │ (Amplificação +     │
-          │     Filtragem)      │
-          └──────────┬──────────┘
-                     │
-                     ▼
-          ┌─────────────────────┐
-          │      RP2040         │
-          │ Aquisição + DSP     │
-          └───────┬─────┬───────┘
-                  │     │
-        ┌─────────┘     └─────────┐
-        ▼                         ▼
-┌──────────────┐         ┌────────────────┐
-│ Display OLED │         │ Buzzer / Alerta│
-└──────────────┘         └────────────────┘
-```
-
 ## Diagrama de blocos
-TODO: diagrama de blocos
+
+<p align="center">
+  <img src="docs/imagens/Figura 2 - Diagrama de blocos da manipulação do sinal.png" alt="Tratamento das grandezas do sinal" width="100%">
+</p>
+
+## Fluxograma da lógica de programação
+<p align="center">
+  <img src="docs/imagens/Figura 2 - Diagrama de blocos da manipulação do sinal.png" alt="Leitura no ADC, filtros de média móvel digitais, detecção de picos e cálculo do BPM" width="100%">
+</p>
 
 # 🔌 Hardware Utilizado
 
@@ -103,26 +68,25 @@ TODO: diagrama de blocos
 
 ## Sensores
 
-- LEDs Vermelho e Infravermelho
+- LEDs Infravermelho
 - Fotodiodo/Fototransistor
 
 ## Condicionamento de Sinal
 
-- Amplificador operacional
-- Filtros passa-baixa e passa-alta
-- Ajuste de offset
-- Proteção de entrada ADC
+- Amplificador de Transimpedância
+- Filtros passa-baixa
+- Amplificador de Ganho
 
 ## Interface
 
 - Display OLED I2C
 - Comunicação Serial USB/UART
 - Buzzer para alertas
+- Vibracall para respiração
 
 ## Estrutura Mecânica
 
-- Case impresso em 3D
-- Suporte para dedo/sensor
+- Suporte para dedo/sensor em 3D
 
 # 🖥️ Firmware
 
