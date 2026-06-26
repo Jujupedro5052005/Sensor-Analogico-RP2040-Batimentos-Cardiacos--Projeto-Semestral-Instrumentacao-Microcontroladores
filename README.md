@@ -117,7 +117,7 @@ O firmware foi desenvolvido em:
 ├── hardware/
 │   ├── esquematico/
 │   ├── pcb/
-│   └── simulacoes/
+│   └── componentes/
 │
 ├── mecanica/
 │   ├── stl/
@@ -151,26 +151,26 @@ O objetivo é melhorar a relação sinal-ruído e permitir medições mais confi
 
 > Inserir imagem do protótipo aqui
 
-```text
-/docs/imagens/prototipo.jpg
-```
+<p align="center">
+  <img src="docs/imagens/Figura 5 – Protótipo inicial analisado com osciloscópio.png" alt="Leitura no ADC, filtros de média móvel digitais, detecção de picos e cálculo do BPM" width="100%">
+</p>
 
 ## Esquema elétrico
 
 > Inserir imagem do esquemático aqui
 
-```text
-/docs/imagens/esquematico.jpg
-```
+<p align="center">
+  <img src="docs/imagens/Figura 4 – Circuito analógico para tratamento do sinal.png" alt="Leitura no ADC, filtros de média móvel digitais, detecção de picos e cálculo do BPM" width="100%">
+</p>
 
 
 # PCB
 
 > Inserir imagem da PCB aqui
 
-```text
-/docs/imagens/pcb.jpg
-```
+<p align="center">
+  <img src="docs/imagens/Figura 6 – PCI feita no EasyEDA, na esquerda, e ela após sair da CNC, na direita.png" alt="Leitura no ADC, filtros de média móvel digitais, detecção de picos e cálculo do BPM" width="100%">
+</p>
 
 # 🎥 Vídeo de Funcionamento
 
@@ -185,7 +185,7 @@ youtube.com/(alguma coisa)
 > O relatório técnico completo do projeto encontra-se em:
 
 ```text
-/docs/apresentacao/
+/docs/relatorio/
 ```
 
 # 👨‍💻 Integrantes
@@ -210,7 +210,7 @@ youtube.com/(alguma coisa)
 
 | Etapa | Data |
 |---|---|
-| Apresentação do Projeto | 02/06/2026 |
+| Apresentação do Projeto | 23/06/2026 |
 | Entrega do Relatório | 28/06/2026 |
 
 # 📜 Licença
