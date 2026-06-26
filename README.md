@@ -166,10 +166,7 @@ O objetivo é melhorar a relação sinal-ruído e permitir medições mais confi
 
 # 🎥 Vídeo de Funcionamento
 <p align="center">
-  <video width="100%" controls>
-    <source src="docs/videos/Video de Funcionamento.mp4" type="video/mp4">
-    Seu navegador não suporta vídeo.
-  </video>
+  <img src="docs/videos/VideodeFuncionamento-ezgif.com-video-to-gif-converter.gif" alt="Funcionamento do sistema" width="100%">
 </p>
 
 # 📄 Relatório Técnico
